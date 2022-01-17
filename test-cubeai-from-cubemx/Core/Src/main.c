@@ -146,11 +146,10 @@ int main(void)
   ai_error ai_err;
   ai_i32 nbatch;
   uint32_t timestamp;
-  float y_val;
-  //float test = 0.0f;
+
 
   //définitin du message de test
-  char message_test[1][15] = {"anniversaire"}; //sous forme d'array pour l'instant, à voir
+  char message_test[1][15] = {"tu es libre?"}; //sous forme d'array pour l'instant, à voir
 
   //définition du tableau de probabilités de sortie du réseau
   float proba_classes[6];
@@ -285,7 +284,7 @@ int main(void)
     for(int b=0;b<51;b++){
     	bow[b]=0;
     }
-    int size_message = sizeof message_test;
+
     int nb_mots = 1; //nb de mots dans le message test (1ere dimension du tableau de message_test)
     for(int w=0; w<nb_mots;w++){
 		for(int w_ref=0; w_ref<51; w_ref++){
@@ -298,7 +297,7 @@ int main(void)
     // Fill input buffer (use test value)
   	for (uint32_t i = 0; i < AI_CHATBOT_IN_1_SIZE; i++)
   	{
-  	  ((ai_int *)in_data)[i] = (ai_int)(bow[i]);
+  	  ((ai_int *)in_data)[i] = (ai_int)(bow[i]); //remplissage avec l'encodage du message test
   	  //test += 0.1; //pour sinus, pas nécessaire pour chatbot
   	}
 
@@ -313,9 +312,9 @@ int main(void)
 	}
 
 	// Read output (predicted y) of neural network
-	y_val = ((char *)out_data)[0]; //résultat du réseau - correspondant à result dans python
+	//y_val = ((char *)out_data)[0];
 
-	//Récupération toutes les valeurs (les probas de chaque classe)
+	//Récupération de l'output du modèle : toutes les valeurs (les probas de chaque classe)
 	for (uint32_t i = 0; i < AI_CHATBOT_OUT_1_SIZE; i++)
 	  	{
 	  	  ((ai_float *)proba_classes)[i] = ((ai_float *)out_data)[i];
@@ -323,18 +322,62 @@ int main(void)
 
 	int pred_class; //max des probas pour prédire la classe correcte
 	ai_float max = proba_classes[0];
-	for (uint32_t i = 1; i < AI_CHATBOT_OUT_1_SIZE; i++)
+	for (uint32_t i = 0; i < AI_CHATBOT_OUT_1_SIZE; i++)
 		{
 		  if(proba_classes[i]>max){
 			  max = proba_classes[i];
 			  pred_class = i;
 		  }
 		}
-	//BILAN: prédiction de l'index de la classe, créer dico et récup la réponse qu'il faut
+	//Creation du dictionnaire
+	//6 : nombre de tags (catégories)
+	//10 : longueur des tags
+	//3 : nombre d'exemples pour chaque tags
+	//50 : longueur des phrases exemples
+	char tag[6][15] = {"greeting", "age", "date", "name", "goodbye", "object_location"};
+	char patterns[6][5][50] = {{"Hello", "La forme?", "Salut", "yo", "ça roule?"},
+			{"Quel âge as-tu?", "C'est quand ton anniversaire?", "Quand es-tu né?"},
+			{"Que fais-tu ce week-end?","Tu veux qu'on fasse un truc ensemble?", "Quels sont tes plans pour cette semaine"},
+			{"Quel est ton prénom?", "Comment tu t'appelles?", "Qui es-tu?"},
+			{ "bye", "Salut", "see ya", "adios", "cya"},
+			{ "Where is the coffee maker?", "Où est la cafetière?"}};
+	//Test de récupération d'un mot: ok
+	char test_patterns[50];
+	for (uint32_t i = 0; i < 50; i++){
+		  test_patterns[i] = patterns[0][0][i];
+		}
+	char responses[6][5][50] = {{"Salut à toi!", "Hello", "Comment vas tu?", "Salutations!", "Enchanté"},
+			{"J'ai 25 ans", "Je suis né en 1996", "Ma date d'anniversaire est le 3 juillet et je suis né en 1996", "03/07/1996"},
+			{"Je suis libre toute la semaine", "Je n'ai rien de prévu", "Je ne suis pas occupé"},
+			{"Mon prénom est Miki", "Je suis Miki", "Miki"},
+			{"C'était sympa de te parler", "à plus tard", "On se reparle très vite!"},
+			{"On the kitchen table","Sur la table de la cuisine"}};
 
-	// Print output of neural network along with inference time (microseconds)
-	buf_len = sprintf(buf, "Output: %f | Duration: %lu\r\n", y_val, htim12.Instance->CNT - timestamp);
-	HAL_UART_Transmit(&huart6, (uint8_t *)buf, buf_len, 100);
+	//Récupération de la réponse
+	char tag_pred[15]; //classe prédite, juste à titre informatif, pas utile pour récupérer une réponse
+	for (uint32_t i = 0; i < 50; i++){
+			  tag_pred[i] = tag[pred_class][i];
+			}
+	//listes des réponses adéquates pour le message test
+	char choice_responses[5][50];
+	for (uint32_t i = 0; i < 5; i++){
+		for (uint32_t j = 0; j < 50; j++){
+			choice_responses[i][j] = responses[pred_class][i][j];
+		}
+	}
+
+	//tirage d'une réponse au hasard
+	int upper = 2;
+	int lower = 0;
+	int random = (rand() % (upper - lower + 1)) + lower;
+
+	char message_answer[50];
+	for (uint32_t i = 0; i < 50; i++){
+		message_answer[i] = choice_responses[random][i];
+	}
+
+	printf(message_answer);
+
 
 	// Wait before doing it again
 	HAL_Delay(500);
