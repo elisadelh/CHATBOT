@@ -1,5 +1,7 @@
 # CHATBOT
 
+Réalisé par Elisa DELHOMME
+
 Ce projet a pour objectif l'implémentation d'un modèle de chatbot sur STM32.
 
 On retrouve une première partie avec l'embarquement d'un modèle simple, celui d'une prédiction de sinus, entièrement fonctionnelle dans le dossier du [projet STM32Cube IDE relatif à la prédiction de sinus](https://github.com/elisadelh/CHATBOT/tree/main/test-cubeai-from-cubemx_Sine_Model).
